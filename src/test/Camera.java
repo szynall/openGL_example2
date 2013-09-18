@@ -23,10 +23,6 @@ public class Camera {
 		setCamera( _eye, new Vector3(0,0,0));
 	}
 	
-	void getForward()
-	{
-	
-	}
 	
 	void setCamera(Vector3 _eyePos, Vector3 _targetPos)
 	{

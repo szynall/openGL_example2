@@ -1,79 +1,152 @@
 package test;
 
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.List;
 
-import Geometry.Triangle;
 import Geometry.Vector3;
-
 
 
 public class LoaderOBJ 
 {
-	public ArrayList<Vector3>	v = new ArrayList<Vector3>();//Lista punktów
-    public ArrayList<Triangle>	f = new ArrayList<Triangle>();	//Lista trójk¹tów
-    public ArrayList<Vector3>   n = new ArrayList<Vector3>();//Lista normalnych
-	/**
-	 * Load obj
-	 * 
-	 * @param name
-	 *            of obj file
-	 * @throws IOException 
-	 */
+    public List<Float> faceVertices = new ArrayList<Float>(); //lista wierzcholkow triangli
+    public List<Float>   n = new ArrayList<Float>();//Lista normalnych
+    public int w=42,h=42;
+
     
 	public LoaderOBJ( String name)
 	{
-		StringBuffer fileData = new StringBuffer();
-		BufferedReader reader = null;
-		char[] buf = new char[1024]; //max size of line
-		int numRead = 0;
-		Vector3 p1,p2,p3;
-		reader = new BufferedReader(new InputStreamReader(Thread.currentThread()
-									.getContextClassLoader()
-									.getResourceAsStream(name)));
-		try { // try to generate two Lists
-				// read data to StringBuffer
-			while ((numRead = reader.read(buf)) != -1) 
-			{
-				String readData = String.valueOf(buf, 0, numRead);
-				fileData.append(readData);
-			}
-			reader.close();
+		Vector3[][] normals = new Vector3[w][h];
+		Vector3 p1,p2,p3,v1,v2,n1;
+		int vertexCount;
+		
+    	try {
+            File file = new File("C:\\Users\\Kutalisk\\workspace\\praktyki\\out\\"+name);
+            
+            @SuppressWarnings("resource")
+			FileInputStream fin = new FileInputStream(file);
+            FileChannel fc = fin.getChannel();
+            ByteBuffer buf = ByteBuffer.allocateDirect((int)fc.size());
+            fc.read(buf);
+            
+            //ustaw kolejnoœæ bajtów
+            buf.order(ByteOrder.BIG_ENDIAN);
+            buf.rewind();
+            
+			vertexCount = buf.getInt();
+			long currentTime = System.currentTimeMillis();
 			
-			// split line by line
-			String[] data = fileData.toString().split("(\\r?\\n)+");
+			//wype³nij tablice normalnych
+			for (int i=0;i<w;i+=1)
+      	  	{
+			  for(int j=0;j<h;j+=1)
+			  {
+				  normals[i][j] = new Vector3(0,0,0);
+			  }
+      	  	}
 			
-			// split only by black character
-			for (int j = 0; j < data.length; j++) 
-			{
-				String[] splitData = data[j].split("\\s");
-				if (splitData[0].equals("v")) 
+			
+			for (int i=0;i<w-1;i+=1)
+      	  	{
+				for(int j=0;j<h-1;j+=1)
 				{
-					v.add(new Vector3(	Float.parseFloat(splitData[1]),
-										Float.parseFloat(splitData[2]),
-										Float.parseFloat(splitData[3])
-									 ));
-				} 
-				else if (splitData[0].equals("f")) 
-				{ 
-					p1=v.get(Integer.parseInt(splitData[1])-1);
-					p2=v.get(Integer.parseInt(splitData[2])-1);
-					p3=v.get(Integer.parseInt(splitData[3])-1);		
-					f.add(new Triangle(p1,p2,p3));	
+					//1st quad triangle
+					p1 = new Vector3(buf.getFloat(i*w*12+(j*12)+4),buf.getFloat(i*w*12+(j*12)+12),buf.getFloat(i*w*12+(j*12)+8));
+					faceVertices.add(p1.x());
+					faceVertices.add(p1.y());
+					faceVertices.add(p1.z());
+					p2 = new Vector3(buf.getFloat((i+1)*w*12+(j*12)+4),buf.getFloat((i+1)*w*12+(j*12)+12),buf.getFloat((i+1)*w*12+(j*12)+8));
+					faceVertices.add(p2.x());
+					faceVertices.add(p2.y());
+					faceVertices.add(p2.z());
+					p3 = new Vector3(buf.getFloat(i*w*12+((j+1)*12)+4),buf.getFloat(i*w*12+((j+1)*12)+12),buf.getFloat(i*w*12+((j+1)*12)+8));
+					faceVertices.add(p3.x());
+					faceVertices.add(p3.y());
+					faceVertices.add(p3.z());
+		  
+					//wylicz wektory
+					v1 = p2.sub(p1);
+					v2 = p3.sub(p1);
+					// wylicz normalna - iloczyn wektorowy
+					n1 = v1.cross(v2);
+					//dodaj normalne
+					normals[i][j].add(n1);
+					normals[i+1][j].add(n1);
+					normals[i][j+1].add(n1);
+					
+					//2nd quad triangle
+					p1 = new Vector3(buf.getFloat(i*w*12+((j+1)*12)+4),buf.getFloat(i*w*12+((j+1)*12)+12),buf.getFloat(i*w*12+((j+1)*12)+8));
+					faceVertices.add(p1.x());
+					faceVertices.add(p1.y());
+					faceVertices.add(p1.z());
+					p2 = new Vector3(buf.getFloat((i+1)*w*12+(j*12)+4),buf.getFloat((i+1)*w*12+(j*12)+12),buf.getFloat((i+1)*w*12+(j*12)+8));
+					faceVertices.add(p2.x());
+					faceVertices.add(p2.y());
+					faceVertices.add(p2.z());
+					p3 = new Vector3(buf.getFloat((i+1)*w*12+((j+1)*12)+4),buf.getFloat((i+1)*w*12+((j+1)*12)+12),buf.getFloat((i+1)*w*12+((j+1)*12)+8));
+					faceVertices.add(p3.x());
+					faceVertices.add(p3.y());
+					faceVertices.add(p3.z());
+
+				  	v2 = p2.sub(p1);
+					v1 = p3.sub(p1);
+					n1 = v2.cross(v1);	
+					
+					normals[i][j+1].add(n1);
+					normals[i+1][j].add(n1);
+					normals[i+1][j+1].add(n1);
+			  }
+      	  	}
+	    	
+			//znormalizuj normalne
+	    	for (int i=0;i<w;i+=1)
+	  	  	{
+				for(int j=0;j<h;j+=1)
+				{
+					normals[i][j] = normals[i][j].normalize();
 				}
-				else if (splitData[0].equals("vn")) 
-					n.add(new Vector3( 	Float.parseFloat( splitData[1]),
-										Float.parseFloat( splitData[2]),
-										Float.parseFloat( splitData[3])
-									 ));
-			}
-		} 
-		catch (IOException e) 
-		{
-			e.printStackTrace();
-		}
+	  	  	}
+	    	
+	    	//dodaj do listy
+	    	for (int i=0;i<w-1;i+=1)
+	  	  	{
+				for(int j=0;j<h-1;j+=1)
+				{
+					  n.add(normals[i][j].x());
+					  n.add(normals[i][j].y());
+					  n.add(normals[i][j].z());
+					  
+					  n.add(normals[i+1][j].x());
+					  n.add(normals[i+1][j].y());
+					  n.add(normals[i+1][j].z());
+					  
+					  n.add(normals[i][j+1].x());
+					  n.add(normals[i][j+1].y());
+					  n.add(normals[i][j+1].z());
+
+					  n.add(normals[i][j+1].x());
+					  n.add(normals[i][j+1].y());
+					  n.add(normals[i][j+1].z());
+					  
+					  n.add(normals[i+1][j].x());
+					  n.add(normals[i+1][j].y());
+					  n.add(normals[i+1][j].z());
+					  
+					  n.add(normals[i+1][j+1].x());
+					  n.add(normals[i+1][j+1].y());
+					  n.add(normals[i+1][j+1].z());
+				}
+	  	  	}
+	    	long elapsedTime = System.currentTimeMillis() - currentTime;
+	    	System.out.print(elapsedTime);
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
 	}
 }
