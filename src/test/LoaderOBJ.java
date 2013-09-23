@@ -16,7 +16,10 @@ public class LoaderOBJ
 {
     public List<Float> faceVertices = new ArrayList<Float>(); //lista wierzcholkow triangli
     public List<Float>   n = new ArrayList<Float>();//Lista normalnych
-    public int w=42,h=42;
+    
+    public int w=42,h=42;      //ustawienia w skali 1:3
+   // public int w=122,h=122;	 //ustawienia w skali 1:1
+    public Vector3 position;
 
     
 	public LoaderOBJ( String name)
@@ -26,7 +29,7 @@ public class LoaderOBJ
 		int vertexCount;
 		
     	try {
-            File file = new File("C:\\Users\\Kutalisk\\workspace\\praktyki\\out\\"+name);
+            File file = new File(name);
             
             @SuppressWarnings("resource")
 			FileInputStream fin = new FileInputStream(file);
@@ -49,7 +52,6 @@ public class LoaderOBJ
 				  normals[i][j] = new Vector3(0,0,0);
 			  }
       	  	}
-			
 			
 			for (int i=0;i<w-1;i+=1)
       	  	{
@@ -100,9 +102,19 @@ public class LoaderOBJ
 					normals[i][j+1].add(n1);
 					normals[i+1][j].add(n1);
 					normals[i+1][j+1].add(n1);
-			  }
+				}
       	  	}
 	    	
+			//srednia pozycja
+			position = new Vector3(0,0,0);
+			for (int i=0;i<w-1;i++)
+			{
+				position.setX(position.x()+buf.getFloat(4+i*12));
+				position.setZ(position.z()+buf.getFloat(i*w*12+8));
+			}
+			position = new Vector3(position.x()/(w-1),0, position.z()/(w-1));
+			
+			
 			//znormalizuj normalne
 	    	for (int i=0;i<w;i+=1)
 	  	  	{
@@ -143,7 +155,7 @@ public class LoaderOBJ
 				}
 	  	  	}
 	    	long elapsedTime = System.currentTimeMillis() - currentTime;
-	    	System.out.print(elapsedTime);
+	    	//System.out.print(elapsedTime);
         }
         catch (Exception e) {
             e.printStackTrace();

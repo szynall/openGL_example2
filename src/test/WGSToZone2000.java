@@ -122,7 +122,7 @@ public class WGSToZone2000{
             double xout, yout;
             xout = 0.999923 * res.g - 0;
             yout = 0.999923 * res.h + 6500000;
-            //yout = 0.999923 * res.h + 500000 + 21/3*1000000;
+           // yout = 0.999923 * res.h + 500000 + 21/3*1000000;
 
             easting = yout;
             northing = xout;

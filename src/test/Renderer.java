@@ -8,7 +8,12 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.nio.FloatBuffer;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ListIterator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
@@ -19,34 +24,76 @@ import javax.media.opengl.glu.GLU;
 import Geometry.*;
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 
 class Renderer implements GLEventListener, KeyListener, MouseListener, 
 MouseMotionListener
 {
-	private SerialTest serial = new SerialTest();
+	private OpenGLEx openGL;
+	//private SerialTest serial = new SerialTest();
     private GLU glu;
-    private boolean forward=false, backward=false, left=false, right = false, up = false, down = false,
+    private boolean shift=false,forward=false, backward=false, left=false, right = false, up = false, down = false,
     				button1 = false,button2 =false,button3=false;
     private float lastPosX = 0, lastPosY, lastTime=0;
-    private Mesh[] meshes;
-    private FloatBuffer vertices, normals; 
-    private Camera camera;
+    public List<Mesh> meshes = new ArrayList<Mesh>();
+    public Camera camera;
     private float[] LightPosition =  {6683328, 16000, 5464137, 1};
     private WGSToZone2000 wgs = new WGSToZone2000();
-    private int VBO[] = null; 
+    private Zone2000ToWGS zone2000 = new Zone2000ToWGS();
+    File[] files;
+    boolean initReady = false;
+    String name = null;
+    
+    
+    public Renderer(OpenGLEx o)
+    {
+    	openGL = o;
+    }
     
     //call every frame
     public void display(GLAutoDrawable drawable) {
+    	 GL2 gl = drawable.getGL().getGL2();     
+    	 if(initReady)
+    	 {
+    		 initVBO(gl, name);
+    	 }
+    	
     	//float time=drawable.getAnimator().getLastFPS();
     	//System.out.println(time);
         Input();
+        
+       // openGL.posLabel.setText("Pozycja: "+df.format() +"N");
+        UpdatePositionLabel();
 		render(drawable);
+    }
+    
+    private void UpdatePositionLabel()
+    {
+    	DecimalFormat df = new DecimalFormat("0");
+    	double lat = zone2000.ConvertLatitudeToWGS84(camera.eyePos.z(), camera.eyePos.x());
+    	double lon = zone2000.ConvertLongitudeToWGS84(camera.eyePos.z(), camera.eyePos.x());
+    	int deglat,hourlat,deglon,hourlon;
+    	deglat = (int)lat;
+    	hourlat = 59-(int)((lat - deglat)*60);
+    	deglon = (int)lon;
+    	hourlon = (int)((lon - deglon)*60);
+    	openGL.posLabel.setText("Pozycja: "+deglat+"°"+hourlat+"'"+(deglat>0?"N ":"S ")+deglon+"°"+hourlon+"'"+(deglon>0?"E":"W"));
+    }
+    
+    public void initVBO(GL2 gl, String name)
+    {
+    	try {
+			meshes.add(new Mesh(gl,name));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	initReady = false;
     }
     
     //render scene
 	private void render(GLAutoDrawable gLDrawable)
-    {
-		
+	{
         GL2 gl = gLDrawable.getGL().getGL2();     
         //usuñ poprzedni¹ klatkê   
         gl.glClear(GL2.GL_COLOR_BUFFER_BIT | GL2.GL_DEPTH_BUFFER_BIT);   
@@ -78,28 +125,14 @@ MouseMotionListener
 		//przesuñ œwiat³o razem z kamer¹
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, LightPosition,0); 
 		
-		// Enable the client states
-        gl.glEnableClientState(GL2.GL_NORMAL_ARRAY);
-        gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
-
-        // Bind the VBOs (loop over the objects)
-        for (int i=0; i<meshes.length; i++) {
-
-            // Use the normals
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, VBO[2*i+1]);
-            gl.glNormalPointer(GL.GL_FLOAT, 0, 0);
-            
-            // Use the vertices
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, VBO[2*i]);
-            gl.glVertexPointer(3, GL.GL_FLOAT, 0, 0);
-
-            // Render the triangles
-                gl.glDrawArrays(GL.GL_TRIANGLES, 0, meshes[i].faceVertices.size()/3);
-        }
-
-        // Disable the client states
-        gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
-        gl.glDisableClientState(GL2.GL_NORMAL_ARRAY);
+		ListIterator<Mesh> it = meshes.listIterator();
+		Mesh mesh;
+		while (it.hasNext())
+		{
+			mesh = it.next();
+			if(mesh.ready = true)
+				mesh.render(gl);
+		}
 		
         gl.glPopMatrix();
         gl.glFlush();
@@ -107,20 +140,22 @@ MouseMotionListener
     
 	//get input
     private void Input()
-    {
-    	
+    {	
     	float currentTime = (float)(System.nanoTime() / 100000000.0);
     	float elapsedTime = currentTime - lastTime;
     	lastTime = currentTime;
-    	
+    		
+    	Vector3 forwardDir = camera.getForwardDir().mul(elapsedTime*(button1?5:1));
+    	Vector3 sideDir = camera.getLeftDirection(forwardDir).mul(elapsedTime*(button1?5:1));
+
 	     if(forward)
-	   		 camera.moveCamera(new Vector3(0,0,400*elapsedTime));
+	   		 camera.moveCamera(forwardDir);
 	   	 if(backward)
-	   		 camera.moveCamera(new Vector3(0,0,-400*elapsedTime));
+	   		 camera.moveCamera(forwardDir.mul(-1));
 	   	 if(left)
-	   		 camera.moveCamera(new Vector3(400*elapsedTime,0,0));
+	   		 camera.moveCamera(sideDir);
 	   	 if(right)
-	   		 camera.moveCamera(new Vector3(-400*elapsedTime,0,0));
+	   		 camera.moveCamera(sideDir.mul(-1));
 	   	 if(up)
 	   		 camera.moveCamera(new Vector3(0,50*elapsedTime,0));		
 	   	 if(down)
@@ -160,24 +195,16 @@ MouseMotionListener
     //initialize GL
     public void init(GLAutoDrawable gLDrawable) 
     {
+    	GL2 gl = gLDrawable.getGL().getGL2();
+    	
+    	Thread t = new Thread(new Loader(this));
+		t.start();
+		
     	System.out.println("init() called");
-        LoaderOBJ loader;
-    	//znajdz wszystkie pliki w katalogu
-    	File[] files = finder("C:\\Users\\Kutalisk\\workspace\\praktyki\\out\\");
-    	meshes = new Mesh[files.length];
-    	
-    	//wczytaj wszystkie pliki przy pomocy LoaderOBJ i zapisz do tablicy meshy
-    	for (int i=0; i<files.length;i++)
-    	{
-    		String name = files[i].getName();
-    		//System.out.println(i+"   "+name);
-    		loader = new LoaderOBJ(name);
-        	meshes[i] = new Mesh(loader.faceVertices,loader.n,loader.h,loader.w);
-    	}
-    	
-        GL2 gl = gLDrawable.getGL().getGL2();
         glu = GLU.createGLU(gl);
         gl.glClearDepth(1.0f);      // set clear depth value to farthest
+        gl.glCullFace(GL2.GL_FRONT);
+        gl.glEnable(GL2.GL_CULL_FACE);
         gl.glHint(GL2.GL_PERSPECTIVE_CORRECTION_HINT, GL2.GL_FASTEST); // perspective correction
         gl.glShadeModel(GL2.GL_SMOOTH); // blends colors nicely, and smoothes out lighting
         gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA); 
@@ -195,52 +222,7 @@ MouseMotionListener
         initLighting(gl);
         
         //ustaw kamere
-        camera = new Camera(6646328,400,5431137,0,0,0);
-        
-        //deklaracja wielkoœci buffora
-        //2 - vertex+normals
-        VBO = new int[meshes.length*2];
-        gl.glGenBuffers(meshes.length*2, VBO, 0);
-        
-        // Loop through all of the objects we have
-        for (int i=0; i<meshes.length; i++) {
-            // Get the current object from which we'll retrieve the vertices and normals
-            Mesh tempObj = meshes[i];
-
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, VBO[2*i]);
-
-            // Allocate the float buffer for the vertices.
-            int totalBufferSize = tempObj.faceVertices.size();
-            vertices = FloatBuffer.allocate(totalBufferSize);
-
-            ListIterator<Float> it = tempObj.faceVertices.listIterator();
-            while(it.hasNext())
-            	vertices.put(it.next());
-            
-            vertices.rewind();
-
-            // Write out vertex buffer to the currently bound VBO. *4 because float
-            gl.glBufferData(GL.GL_ARRAY_BUFFER, totalBufferSize *4, vertices, GL.GL_STATIC_DRAW);
-
-            // Free the vertices buffer since we are done with them
-            vertices = null;
-
-            gl.glBindBuffer(GL.GL_ARRAY_BUFFER, VBO[2*i+1]);
-
-            totalBufferSize = tempObj.normals.size();
-            normals = FloatBuffer.allocate(totalBufferSize);
-            it = tempObj.normals.listIterator();
-            while(it.hasNext())
-            	normals.put(it.next());
-
-            normals.rewind();
-
-            // Write out the normals buffer to the currently bound VBO.
-            gl.glBufferData(GL.GL_ARRAY_BUFFER, totalBufferSize *4, normals, GL.GL_STATIC_DRAW);
-
-            // Free the normals
-            normals = null;
-        }
+        camera = new Camera(6646228,400,5431137,6646328,400,5431137);
 
         //utwórz listenery do klawiatury i myszki
         ((Component) gLDrawable).addMouseListener(this);
@@ -248,15 +230,15 @@ MouseMotionListener
         ((Component) gLDrawable).addKeyListener(this);
         
         //serial init
-    	serial.initialize();
+    	//serial.initialize();
     }
     
     //create fog
     private void initFog( GL2 gl )
     {
     	gl.glEnable(GL2.GL_FOG);
-		gl.glFogf(GL2.GL_FOG_START,20000.0f); 	 //pocz¹tek
-		gl.glFogf(GL2.GL_FOG_END,50000.0f);   	 //koniec
+		gl.glFogf(GL2.GL_FOG_START,60000.0f); 	 //pocz¹tek
+		gl.glFogf(GL2.GL_FOG_END,100000.0f);   	 //koniec
 		gl.glFogi(GL2.GL_FOG_MODE,GL.GL_LINEAR);
 		float fogColor[]={0.0f, 0.78f, 0.94f,1};
 		gl.glFogfv(GL2.GL_FOG_COLOR,fogColor,0);
@@ -282,24 +264,20 @@ MouseMotionListener
 
 		if (keyCode == KeyEvent.VK_1)
 			button1 = button1?false:true;
-		if (keyCode == KeyEvent.VK_2)
-			button2 = button2?false:true;
-		if (keyCode == KeyEvent.VK_3)
-			button3 = button3?false:true;
-		
+	
 		if (keyCode == KeyEvent.VK_ESCAPE)
 			System.exit(0);	
-		if (keyCode == KeyEvent.VK_W)
+		if (keyCode == KeyEvent.VK_UP)
 			forward = true;
-		if (keyCode == KeyEvent.VK_S)
+		if (keyCode == KeyEvent.VK_DOWN)
 			backward = true;
-		if (keyCode == KeyEvent.VK_A) 
+		if (keyCode == KeyEvent.VK_LEFT) 
 			left = true;
-		if (keyCode == KeyEvent.VK_D)
+		if (keyCode == KeyEvent.VK_RIGHT)
 			right = true;	
-		if (keyCode == KeyEvent.VK_Q)
+		if (keyCode == KeyEvent.VK_PAGE_UP)
 			up = true;	
-		if (keyCode == KeyEvent.VK_E)
+		if (keyCode == KeyEvent.VK_PAGE_DOWN)
 			down = true;	
 	}
 
@@ -309,31 +287,37 @@ MouseMotionListener
 
 		if (keyCode == KeyEvent.VK_ESCAPE)
 			System.exit(0);
-		if (keyCode == KeyEvent.VK_W)
+		if (keyCode == KeyEvent.VK_UP)
 			forward = false;
-		if (keyCode == KeyEvent.VK_S)
+		if (keyCode == KeyEvent.VK_DOWN)
 			backward = false;
-		if (keyCode == KeyEvent.VK_A)
+		if (keyCode == KeyEvent.VK_LEFT)
 			left = false;
-		if (keyCode == KeyEvent.VK_D)
+		if (keyCode == KeyEvent.VK_RIGHT)
 			right = false;
-		if (keyCode == KeyEvent.VK_Q)
+		if (keyCode == KeyEvent.VK_PAGE_UP)
 			up = false;
-		if (keyCode == KeyEvent.VK_E)
+		if (keyCode == KeyEvent.VK_PAGE_DOWN)
 			down = false;
 	}
 	
 	public void keyTyped(KeyEvent e) {}
 	
 	//set camera from cordinates
-    public void cameraSet(double lonh, double lath, int lonmin, int latmin, int lonsec, int latsec)
-    {
-    	double lat = lath+(double)latmin/60 + (double)latsec/3600;
+    public void cameraSet(String cordinates)
+    {	
+    	Pattern pattern = Pattern.compile("(\\-?[0-9]+[\\.]{0,1}[0-9]*),(\\-?[0-9]+[\\.]{0,1}[0-9]*)");
+    	Matcher matcher = pattern.matcher(cordinates);
+    
+    	if (matcher.find())
+    	{
+    	double lat = Double.parseDouble(matcher.group(1));
 
-    	double lon = lonh+(double)lonmin/60 + (double)lonsec/3600;
+    	double lon = Double.parseDouble(matcher.group(2));
     	camera.eyePos = new Vector3(wgs.ConvertLongitude(lat,lon),
-    								500,
+    								1000,
     								wgs.ConvertLatitude(lat,lon));
+    	}
     }
 
     public File[] finder( String dirName){
