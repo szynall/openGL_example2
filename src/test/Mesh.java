@@ -2,7 +2,6 @@ package test;
 
 import java.io.IOException;
 import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.util.ListIterator;
 
 import javax.media.opengl.GL;
@@ -34,8 +33,7 @@ public class Mesh {
     	// Generate Vertex Field
     	
     	
-        vertexCount = 30258;    //ustawienia 1:3
-    	//vertexCount = 263538;	  //ustawienia 1:1
+        vertexCount = (loader.lenght-1)*(loader.width-1)*2*9;   //dlugosc-1 * szerokosc-1 * 2 (triangle per quad) *9
     	
     	
         // TODO loading vertex count

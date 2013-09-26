@@ -1,7 +1,6 @@
 package test;
 
 import Geometry.ComplexNumber;
-import Geometry.ComplexNumber.sComp;
 
 public class Zone2000ToWGS
 {

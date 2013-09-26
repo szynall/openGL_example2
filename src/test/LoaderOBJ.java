@@ -17,15 +17,15 @@ public class LoaderOBJ
     public List<Float> faceVertices = new ArrayList<Float>(); //lista wierzcholkow triangli
     public List<Float>   n = new ArrayList<Float>();//Lista normalnych
     
-    public int w=42,h=42;      //ustawienia w skali 1:3
-   // public int w=122,h=122;	 //ustawienia w skali 1:1
+    public int width,lenght;      //ustawienia w skali 1:3
+    //public int w=122,h=122;	 //ustawienia w skali 1:1
     public Vector3 position;
 
     
 	public LoaderOBJ( String name)
-	{
-		Vector3[][] normals = new Vector3[w][h];
+	{	
 		Vector3 p1,p2,p3,v1,v2,n1;
+		@SuppressWarnings("unused")
 		int vertexCount;
 		
     	try {
@@ -37,36 +37,38 @@ public class LoaderOBJ
             ByteBuffer buf = ByteBuffer.allocateDirect((int)fc.size());
             fc.read(buf);
             
+            
             //ustaw kolejnoœæ bajtów
             buf.order(ByteOrder.BIG_ENDIAN);
             buf.rewind();
+            width = buf.getInt(buf.capacity()-4);
+            lenght = buf.getInt(buf.capacity()-8);
             
-			vertexCount = buf.getInt();
-			long currentTime = System.currentTimeMillis();
-			
+            Vector3[][] normals = new Vector3[lenght][width];
+            long currentTime = System.currentTimeMillis();
 			//wype³nij tablice normalnych
-			for (int i=0;i<w;i+=1)
+			for (int i=0;i<lenght;i++)
       	  	{
-			  for(int j=0;j<h;j+=1)
+			  for(int j=0;j<width;j++)
 			  {
 				  normals[i][j] = new Vector3(0,0,0);
 			  }
       	  	}
-			
-			for (int i=0;i<w-1;i+=1)
+	
+			for (int i=0;i<lenght-1;i++)
       	  	{
-				for(int j=0;j<h-1;j+=1)
+				for(int j=0;j<width-1;j++)
 				{
 					//1st quad triangle
-					p1 = new Vector3(buf.getFloat(i*w*12+(j*12)+4),buf.getFloat(i*w*12+(j*12)+12),buf.getFloat(i*w*12+(j*12)+8));
+					p1 = new Vector3(buf.getFloat(i*width*12+(j*12)),buf.getFloat(i*width*12+(j*12)+8),buf.getFloat(i*width*12+(j*12)+4));
 					faceVertices.add(p1.x());
 					faceVertices.add(p1.y());
 					faceVertices.add(p1.z());
-					p2 = new Vector3(buf.getFloat((i+1)*w*12+(j*12)+4),buf.getFloat((i+1)*w*12+(j*12)+12),buf.getFloat((i+1)*w*12+(j*12)+8));
+					p2 = new Vector3(buf.getFloat((i+1)*width*12+(j*12)),buf.getFloat((i+1)*width*12+(j*12)+8),buf.getFloat((i+1)*width*12+(j*12)+4));
 					faceVertices.add(p2.x());
 					faceVertices.add(p2.y());
 					faceVertices.add(p2.z());
-					p3 = new Vector3(buf.getFloat(i*w*12+((j+1)*12)+4),buf.getFloat(i*w*12+((j+1)*12)+12),buf.getFloat(i*w*12+((j+1)*12)+8));
+					p3 = new Vector3(buf.getFloat(i*width*12+((j+1)*12)),buf.getFloat(i*width*12+((j+1)*12)+8),buf.getFloat(i*width*12+((j+1)*12)+4));
 					faceVertices.add(p3.x());
 					faceVertices.add(p3.y());
 					faceVertices.add(p3.z());
@@ -82,15 +84,15 @@ public class LoaderOBJ
 					normals[i][j+1].add(n1);
 					
 					//2nd quad triangle
-					p1 = new Vector3(buf.getFloat(i*w*12+((j+1)*12)+4),buf.getFloat(i*w*12+((j+1)*12)+12),buf.getFloat(i*w*12+((j+1)*12)+8));
+					p1 = new Vector3(buf.getFloat(i*width*12+((j+1)*12)),buf.getFloat(i*width*12+((j+1)*12)+8),buf.getFloat(i*width*12+((j+1)*12)+4));
 					faceVertices.add(p1.x());
 					faceVertices.add(p1.y());
 					faceVertices.add(p1.z());
-					p2 = new Vector3(buf.getFloat((i+1)*w*12+(j*12)+4),buf.getFloat((i+1)*w*12+(j*12)+12),buf.getFloat((i+1)*w*12+(j*12)+8));
+					p2 = new Vector3(buf.getFloat((i+1)*width*12+(j*12)),buf.getFloat((i+1)*width*12+(j*12)+8),buf.getFloat((i+1)*width*12+(j*12)+4));
 					faceVertices.add(p2.x());
 					faceVertices.add(p2.y());
 					faceVertices.add(p2.z());
-					p3 = new Vector3(buf.getFloat((i+1)*w*12+((j+1)*12)+4),buf.getFloat((i+1)*w*12+((j+1)*12)+12),buf.getFloat((i+1)*w*12+((j+1)*12)+8));
+					p3 = new Vector3(buf.getFloat((i+1)*width*12+((j+1)*12)),buf.getFloat((i+1)*width*12+((j+1)*12)+8),buf.getFloat((i+1)*width*12+((j+1)*12)+4));
 					faceVertices.add(p3.x());
 					faceVertices.add(p3.y());
 					faceVertices.add(p3.z());
@@ -105,29 +107,20 @@ public class LoaderOBJ
 				}
       	  	}
 	    	
-			//srednia pozycja
-			position = new Vector3(0,0,0);
-			for (int i=0;i<w-1;i++)
-			{
-				position.setX(position.x()+buf.getFloat(4+i*12));
-				position.setZ(position.z()+buf.getFloat(i*w*12+8));
-			}
-			position = new Vector3(position.x()/(w-1),0, position.z()/(w-1));
-			
 			
 			//znormalizuj normalne
-	    	for (int i=0;i<w;i+=1)
+	    	for (int i=0;i<lenght;i++)
 	  	  	{
-				for(int j=0;j<h;j+=1)
+				for(int j=0;j<width;j++)
 				{
 					normals[i][j] = normals[i][j].normalize();
 				}
 	  	  	}
 	    	
 	    	//dodaj do listy
-	    	for (int i=0;i<w-1;i+=1)
+	    	for (int i=0;i<lenght-1;i++)
 	  	  	{
-				for(int j=0;j<h-1;j+=1)
+				for(int j=0;j<width-1;j++)
 				{
 					  n.add(normals[i][j].x());
 					  n.add(normals[i][j].y());
@@ -154,7 +147,8 @@ public class LoaderOBJ
 					  n.add(normals[i+1][j+1].z());
 				}
 	  	  	}
-	    	long elapsedTime = System.currentTimeMillis() - currentTime;
+	    	@SuppressWarnings("unused")
+			long elapsedTime = System.currentTimeMillis() - currentTime;
 	    	//System.out.print(elapsedTime);
         }
         catch (Exception e) {

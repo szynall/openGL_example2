@@ -2,9 +2,7 @@ package test;
 
 import java.io.File;
 import java.io.FilenameFilter;
-import java.io.IOException;
 import java.util.Iterator;
-import java.util.ListIterator;
 
 import javax.media.opengl.GL2;
 
@@ -36,7 +34,8 @@ public class Loader	implements Runnable {
 	
 	public void Load()
 	{
-		File[] files = finder("C:\\Users\\Kutalisk\\workspace\\praktyki\\out\\");
+		String cwd = System.getProperty("user.dir");
+		File[] files = finder(cwd+"\\data\\");
     	
     	//wczytaj wszystkie pliki przy pomocy LoaderOBJ i zapisz do tablicy meshy
     	for (int i=0; i<files.length;i++)
@@ -54,7 +53,7 @@ public class Loader	implements Runnable {
 					e.printStackTrace();
 				}
     		}
-    		System.out.println("Doda³em mesh!");
+    		System.out.println("Doda³em mesh"+files[i].getName());
     	}
 	}
 	

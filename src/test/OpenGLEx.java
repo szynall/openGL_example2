@@ -2,7 +2,6 @@ package test;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
@@ -13,6 +12,7 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
 import javax.swing.JTextArea;
 import javax.swing.text.JTextComponent;
 
@@ -29,6 +29,8 @@ public class OpenGLEx
     JButton cameraSetButton;
     static Renderer r;
     JLabel posLabel;
+    JSlider heightSlider = new JSlider(JSlider.VERTICAL,
+            0, 9000, 600);
 	public OpenGLEx()
 	{
     	posLabel = new JLabel("Pozycja: ");
@@ -39,13 +41,7 @@ public class OpenGLEx
         cameraSetButton.addActionListener(new ActionListener() { 
             public void actionPerformed(ActionEvent e)
             {
-					//try {
-						//r.cameraSet(Double.parseDouble(lat.getText()),Double.parseDouble(lon.getText()),
-						//		Integer.parseInt(latmin.getText()),Integer.parseInt(lonmin.getText()),
-						//		Integer.parseInt(latsec.getText()),Integer.parseInt(lonsec.getText()));
 						r.cameraSet(cordinates.getText());
-					//} catch (NumberFormatException e1) {
-					//}
             }
         });      
         
@@ -62,13 +58,19 @@ public class OpenGLEx
         
         JPanel buttonpanel = new JPanel();
         cordinates.setPreferredSize(new Dimension(200,20));
+        heightSlider.setPreferredSize(new Dimension(40,400));
+        heightSlider.setMajorTickSpacing(1000);
+        heightSlider.setMinorTickSpacing(500);
+        heightSlider.setPaintTicks(true);
+        //heightSlider.setPaintLabels(true);
         buttonpanel.add(cordinatesLabel);
         buttonpanel.add(cordinates);
         buttonpanel.add(cameraSetButton);
+      //  buttonpanel.add(heightSlider);
         panel.add("North",buttonpanel);
         panel.add("Center",canvas);
         panel.add("South",posLabel);
-        
+        panel.add("East",heightSlider);
         
         animator = new Animator(canvas);
         //animator = new FPSAnimator(canvas,60);

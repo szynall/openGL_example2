@@ -6,14 +6,17 @@ public class Camera {
 
 	public Vector3 eyePos;
 	public Vector3 targetPos;
-	public Matrix4x4f matrixView = new Matrix4x4f();;
+	public Matrix4x4f matrixView = new Matrix4x4f();
 	public float cameraAngle[] = new float[3];
 	
 	
 	public Camera(float x, float y, float z, float tx, float ty, float tz)
 	{
 		eyePos = new Vector3(x,y,z);
-		targetPos = new Vector3(tx,ty,tz);
+		targetPos = new Vector3(tx,ty,tz); 
+		cameraAngle[0]=0;
+		cameraAngle[1]=0;
+		cameraAngle[2]=0;
 	}
 	
 	public void moveCamera(Vector3 moveVector)
